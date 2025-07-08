@@ -3,9 +3,9 @@ import LiveStreaming from "./components/LiveStreaming";
 
 function App() {
   return (
-    <div style={{ background: "#121212", color: "#fff", minHeight: "100vh" }}>
+    <div style={{ background: "#121212", color: "#fff" }}>
       <h1 style={{ textAlign: "center", padding: 20 }}>
-        Live Streaming System A
+        Firecloud Live Streaming
       </h1>
       <LiveStreaming />
     </div>
