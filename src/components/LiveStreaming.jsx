@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import io from "socket.io-client";
 
-const LOCAL_IP_ADDRESS = "90.90.90.184"; // Replace with your server IP
+const LOCAL_IP_ADDRESS = "10.10.40.79"; // Replace with your server IP
 const socketServerUrl = `http://${LOCAL_IP_ADDRESS}:3001`;
 
 const iceServers = {
@@ -170,22 +170,55 @@ function LiveStreaming() {
 
   // Send click coordinates to broadcaster
   useEffect(() => {
-    const video = remoteVideoRef.current;
-    if (!video) return;
+    if (!isBroadcaster || !localVideoRef.current) return;
+
+    const video = localVideoRef.current;
 
     const handleClick = (e) => {
       const rect = video.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
+
+      const relativeX = (e.clientX - rect.left) / rect.width;
+      const relativeY = (e.clientY - rect.top) / rect.height;
+
+      const absoluteX = e.clientX;
+      const absoluteY = e.clientY;
+
+      console.log("📍 Relative Coordinates:", {
+        x: relativeX.toFixed(4),
+        y: relativeY.toFixed(4),
+      });
+      console.log("📌 Absolute Coordinates:", { x: absoluteX, y: absoluteY });
 
       if (socketRef.current) {
-        socketRef.current.emit("clickCoords", { x, y, roomName });
+        socketRef.current.emit("clickCoords", {
+          relativeX,
+          relativeY,
+          absoluteX,
+          absoluteY,
+          roomName,
+        });
       }
+
+      // Create and show red dot at absolute click location
+      const marker = document.createElement("div");
+      marker.style.position = "fixed"; // absolute to screen
+      marker.style.width = "12px";
+      marker.style.height = "12px";
+      marker.style.borderRadius = "50%";
+      marker.style.backgroundColor = "red";
+      marker.style.left = `${absoluteX - 6}px`; // center the dot
+      marker.style.top = `${absoluteY - 6}px`;
+      marker.style.zIndex = 9999;
+      marker.style.pointerEvents = "none";
+      document.body.appendChild(marker);
+
+      // Remove after 1 second
+      setTimeout(() => marker.remove(), 1000);
     };
 
     video.addEventListener("click", handleClick);
     return () => video.removeEventListener("click", handleClick);
-  }, [remoteVideoRef.current, roomName]);
+  }, [isBroadcaster, roomName]);
 
   return (
     <div style={styles.container}>
@@ -221,16 +254,17 @@ function LiveStreaming() {
         {isBroadcaster ? (
           <div style={styles.videoWrapper}>
             <h3 style={styles.videoLabel}>Your Broadcast</h3>
-            <video ref={localVideoRef} autoPlay muted style={styles.video} />
+            <video
+              style={{ ...styles.video, cursor: "crosshair" }}
+              ref={localVideoRef}
+              autoPlay
+              muted
+            />
           </div>
         ) : remoteStream ? (
           <div style={styles.videoWrapper}>
             <h3 style={styles.videoLabel}>Live Stream</h3>
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              style={{ ...styles.video, cursor: "crosshair" }}
-            />
+            <video ref={remoteVideoRef} autoPlay style={{ ...styles.video }} />
           </div>
         ) : (
           <div style={styles.placeholder}>
